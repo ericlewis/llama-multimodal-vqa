@@ -2,9 +2,9 @@ import torch
 from transformers import AutoImageProcessor, AutoTokenizer
 
 from utils.constants import IMAGE_TOKEN, PAD_TOKEN, LORA_CONFIG
-from model.configuration_llama import MultimodalLlamaConfig
-from model.modeling_llama import MultimodalLlamaForConditionalGeneration
-from processing_llama import MultiModalLlamaProcessor
+from src.model.configuration import MultimodalConfig
+from src.model.mutlimodal_model import MultimodalModelForConditionalGeneration
+from src.processing import MultiModalProcessor
 
 
 def build_model(text_model_id,
@@ -28,29 +28,26 @@ def build_model(text_model_id,
 
     tokenizer_len = len(tokenizer)
 
-    multimodal_llama_config = MultimodalLlamaConfig(vision_model_id=vision_model_id,
-                                                    text_model_id=text_model_id,
-                                                    tokenizer_len=tokenizer_len,
-                                                    lora_config=LORA_CONFIG,
-                                                    freeze_multimodal_projector=freeze_multimodal_projector,
-                                                    freeze_language_model=freeze_language_model,
-                                                    freeze_vision_model=freeze_vision_model,
-                                                    load_in_4bit=load_in_4bit)
+    multimodal_config = MultimodalConfig(vision_model_id=vision_model_id,
+                                         text_model_id=text_model_id,
+                                         tokenizer_len=tokenizer_len,
+                                         lora_config=LORA_CONFIG,
+                                         freeze_multimodal_projector=freeze_multimodal_projector,
+                                         freeze_language_model=freeze_language_model,
+                                         freeze_vision_model=freeze_vision_model,
+                                         load_in_4bit=load_in_4bit)
 
     # Image processor
     image_processor = AutoImageProcessor.from_pretrained(vision_model_id)
-    processor = MultiModalLlamaProcessor(image_processor=image_processor, tokenizer=tokenizer)
+    processor = MultiModalProcessor(image_processor=image_processor, tokenizer=tokenizer)
 
     # Language model
-    multimodal_llama_model = MultimodalLlamaForConditionalGeneration(multimodal_llama_config).to(device)
+    multimodal_model = MultimodalModelForConditionalGeneration(multimodal_config).to(device)
 
     if use_bfloat16:
-        multimodal_llama_model = multimodal_llama_model.to(torch.bfloat16)
-
-    # Gradient checkpointing
-    #multimodal_llama_model.gradient_checkpointing_enable()
+        multimodal_model = multimodal_model.to(torch.bfloat16)
 
     return dict(tokenizer=tokenizer,
-                model=multimodal_llama_model,
+                model=multimodal_model,
                 processor=processor,
-                config=multimodal_llama_config)
+                config=multimodal_config)

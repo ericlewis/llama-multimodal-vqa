@@ -12,7 +12,7 @@ from transformers import TrainingArguments
 from dataset.data_handling import create_dataset
 from model.model_utils import build_model
 from utils.utils import get_available_device, set_seed, make_save_folder
-from trainer_llama import MultimodalLlamaTrainer
+from src.trainer_multimodal import MultimodalTrainer
 
 
 logging.basicConfig(level=logging.INFO,
@@ -22,7 +22,7 @@ logging.basicConfig(level=logging.INFO,
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--text_model_id',
-                        default='meta-llama/Meta-Llama-3-8B-Instruct',
+                        default='HuggingFaceTB/SmolLM-135M-Instruct',
                         help='Huggingface model path to the language model. Examples:'
                              '- meta-llama/Llama-2-13b-chat-hf'
                              '- lmsys/vicuna-7b-v1.5'
@@ -110,11 +110,11 @@ if __name__ == '__main__':
         model_stack['model'].gradient_checkpointing_enable()
 
     logging.info("Building trainer...")
-    trainer = MultimodalLlamaTrainer(model=model_stack['model'],
-                                     tokenizer=model_stack['tokenizer'],
-                                     group_by_modality_length=True,
-                                     args=training_args,
-                                     **data_module)
+    trainer = MultimodalTrainer(model=model_stack['model'],
+                                tokenizer=model_stack['tokenizer'],
+                                group_by_modality_length=True,
+                                args=training_args,
+                                **data_module)
 
     logging.info("Starting training...")
     if list(pathlib.Path(training_args.output_dir).glob("checkpoint-*")):

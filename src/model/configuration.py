@@ -1,10 +1,10 @@
 from transformers import PretrainedConfig, AutoConfig
 
-from constants import LORA_CONFIG
+from utils.constants import LORA_CONFIG
 
 
-class MultimodalLlamaConfig(PretrainedConfig):
-    model_type = "multimodal_llama"
+class MultimodalConfig(PretrainedConfig):
+    model_type = "multimodal"
     keys_to_ignore_at_inference = ["past_key_values"]
 
     def __init__(
@@ -50,8 +50,7 @@ class MultimodalLlamaConfig(PretrainedConfig):
 
         # Instantiate the pretraining configs for text and vision models
         if text_model_id is not None:
-            text_config = AutoConfig.from_pretrained(text_model_id)
-            self.text_config = text_config
+            self.text_config = AutoConfig.from_pretrained(text_model_id)
         else:
             self.text_config = None
 

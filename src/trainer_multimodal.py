@@ -1,5 +1,5 @@
 """
-Custom trainer for the multimodal llama model. Mostly taken from the LlaVA trainer.
+Custom trainer for the multimodal model. Mostly taken from the LlaVA trainer.
 """
 
 import torch
@@ -107,7 +107,7 @@ class LengthGroupedSampler(Sampler):
         return iter(indices)
 
 
-class MultimodalLlamaTrainer(Trainer):
+class MultimodalTrainer(Trainer):
     def __init__(self, group_by_modality_length, **kwargs):
         super().__init__(**kwargs)
         self.group_by_modality_length = group_by_modality_length
@@ -172,7 +172,7 @@ class MultimodalLlamaTrainer(Trainer):
         return self.optimizer
 
     def _save_checkpoint(self, model, trial, metrics=None):
-        super(MultimodalLlamaTrainer, self)._save_checkpoint(model, trial, metrics)
+        super(MultimodalTrainer, self)._save_checkpoint(model, trial, metrics)
 
     def _save(self, output_dir = None, state_dict=None):
-        super(MultimodalLlamaTrainer, self)._save(output_dir, state_dict)
+        super(MultimodalTrainer, self)._save(output_dir, state_dict)

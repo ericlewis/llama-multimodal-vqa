@@ -5,26 +5,27 @@ from torch import nn
 from transformers import AutoModel, AutoModelForCausalLM, Cache, PreTrainedModel, BitsAndBytesConfig
 from transformers.models.llava.modeling_llava import LlavaCausalLMOutputWithPast
 
-from configuration_llama import MultimodalLlamaConfig
-from multimodal_projector import MultiModalLlamaProjector
+from src.model.configuration import MultimodalConfig
+from src.model.multimodal_projector import MultiModalProjector
 
 
-class MultimodalLlamaForConditionalGeneration(PreTrainedModel):
-    config_class = MultimodalLlamaConfig
+class MultimodalModelForConditionalGeneration(PreTrainedModel):
+    config_class = MultimodalConfig
     supports_gradient_checkpointing = True
 
-    def __init__(self, config: MultimodalLlamaConfig):
+    def __init__(self, config: MultimodalConfig):
         super().__init__(config)
 
         self.config = config
 
         # Instantiate the models for text and vision
-        self.language_model = AutoModelForCausalLM.from_pretrained(config.text_model_id,
-                                                                   resume_download=True,
-                                                                   torch_dtype=torch.bfloat16,
-                                                                   quantization_config=BitsAndBytesConfig(load_in_4bit=True) if config.load_in_4bit else None,
-                                                                   attn_implementation="flash_attention_2",
-                                                                   )
+        self.language_model = AutoModelForCausalLM.from_pretrained(
+            config.text_model_id,
+            resume_download=True,
+            torch_dtype=torch.bfloat16,
+            quantization_config=BitsAndBytesConfig(load_in_4bit=True) if config.load_in_4bit else None,
+            attn_implementation="flash_attention_2",
+        )
         self.vision_model = AutoModel.from_pretrained(config.vision_model_id)
 
         # Keep only vision model's encoder if using CLIP
@@ -33,7 +34,7 @@ class MultimodalLlamaForConditionalGeneration(PreTrainedModel):
 
         # Instantiate the multimodal projector
         self.vocab_size = self.config.text_config.vocab_size
-        self.multi_modal_projector = MultiModalLlamaProjector(self.config)
+        self.multi_modal_projector = MultiModalProjector(self.config)
 
         # Resize embedding layer from the model
         self.resize_token_embeddings(self.config.tokenizer_len)

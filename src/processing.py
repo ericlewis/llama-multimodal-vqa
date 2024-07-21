@@ -11,23 +11,23 @@ from transformers.tokenization_utils_base import TextInput, PreTokenizedInput, T
 from transformers.utils import PaddingStrategy
 
 
-class MultiModalLlamaProcessor(ProcessorMixin):
+class MultiModalProcessor(ProcessorMixin):
     r"""
-    Constructs a MultiModalLlama processor which wraps a image processor and a tokenizer into a single processor.
+    Constructs a MultiModal processor which wraps a image processor and a tokenizer into a single processor.
 
-    [`MultiModalLlamaProcessor`] offers all the functionalities of [`CLIPImageProcessor`] and [`LlamaTokenizerFast`]. See the
-    [`~MultiModalLlamaProcessor.__call__`] and [`~MultiModalLlamaProcessor.decode`] for more information.
+    [`MultiModalProcessor`] offers all the functionalities of [`CLIPImageProcessor`] and [`LlamaTokenizerFast`]. See the
+    [`~MultiModalProcessor.__call__`] and [`~MultiModalProcessor.decode`] for more information.
 
     Args:
         image_processor ([`CLIPImageProcessor`], *optional*):
             The image processor is a required input.
-        tokenizer ([`LlamaTokenizerFast`], *optional*):
+        tokenizer ([`PretrainedTokenizerFast`], *optional*):
             The tokenizer is a required input.
     """
 
     attributes = ["image_processor", "tokenizer"]
     image_processor_class = "CLIPImageProcessor"
-    tokenizer_class = ("LlamaTokenizer", "LlamaTokenizerFast", "PreTrainedTokenizerFast", "PreTrainedTokenizer")
+    tokenizer_class = ("AutoTokenizer", "PreTrainedTokenizerFast", "PreTrainedTokenizer")
 
     def __init__(self, image_processor=None, tokenizer=None):
         super().__init__(image_processor, tokenizer)

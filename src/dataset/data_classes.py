@@ -7,7 +7,7 @@ import transformers
 from PIL import Image
 from torch.utils.data import Dataset
 
-from constants import IGNORE_INDEX
+from utils.constants import IGNORE_INDEX
 from dataset.data_utils import preprocess_multimodal
 
 
@@ -57,50 +57,42 @@ class SupervisedDataset(Dataset):
         sources = self.list_data_dict[i]
         if isinstance(i, int):
             sources = [sources]
-        assert len(sources) == 1, "Don't know why it is wrapped to a list"
+        assert len(sources) == 1, "Don't know how to handle this!"
+
         if 'image' in sources[0]:
             image_file = self.list_data_dict[i]['image']
             image_folder = self.image_folder
             processor = self.image_processor
             image = Image.open(os.path.join(image_folder, image_file)).convert('RGB')
-            if self.image_aspect_ratio == 'pad':
-                def expand2square(pil_img, background_color):
-                    width, height = pil_img.size
-                    if width == height:
-                        return pil_img
-                    elif width > height:
-                        result = Image.new(pil_img.mode, (width, width), background_color)
-                        result.paste(pil_img, (0, (width - height) // 2))
-                        return result
-                    else:
-                        result = Image.new(pil_img.mode, (height, height), background_color)
-                        result.paste(pil_img, ((height - width) // 2, 0))
-                        return result
-                image = expand2square(image, tuple(int(x*255) for x in processor.image_mean))
+            if self.image_aspect_ratio == 'keep':
                 image = processor.preprocess(image, return_tensors='pt')['pixel_values'][0]
+            elif self.image_aspect_ratio == 'pad':
+                # Use the processor directly instead of process_images_clip
+                image = processor(images=image, return_tensors='pt')['pixel_values'][0]
             else:
-                image = processor.preprocess(image, return_tensors='pt')['pixel_values'][0]
-            sources = preprocess_multimodal(copy.deepcopy([e["conversations"] for e in sources]),
-                                            is_multimodal=self.is_multimodal)
+                raise ValueError(f"Invalid image_aspect_ratio: {self.image_aspect_ratio}")
         else:
-            sources = copy.deepcopy([e["conversations"] for e in sources])
+            image = None
 
         data_dict = self.preprocess_func(
             sources,
             self.tokenizer,
             has_image=('image' in self.list_data_dict[i]))
+        
+        if data_dict is None:
+            # Handle the case where preprocessing failed
+            print(f"Preprocessing failed for item {i}. Skipping this item.")
+            # You might want to return a default item or skip to the next one
+            # For now, let's return a dummy item
+            return {"input_ids": torch.tensor([0]), "labels": torch.tensor([0])}
 
-        if isinstance(i, int):
-            data_dict = dict(input_ids=data_dict["input_ids"][0],
-                             labels=data_dict["labels"][0])
+        data_dict = dict(input_ids=data_dict["input_ids"][0],
+                         labels=data_dict["labels"][0])
 
         # image exist in the data
-        if 'image' in self.list_data_dict[i]:
+        if image is not None:
             data_dict['image'] = image
-        elif self.is_multimodal:
-            # image does not exist in the data, but the model is multimodal
-            crop_size = self.image_processor.crop_size
-            data_dict['image'] = torch.zeros(3, crop_size['height'], crop_size['width'])
+
         return data_dict
 
 
@@ -120,12 +112,17 @@ class DataCollatorForSupervisedDataset(object):
         labels = torch.nn.utils.rnn.pad_sequence(labels,
                                                  batch_first=True,
                                                  padding_value=IGNORE_INDEX)
-        input_ids = input_ids[:, :self.tokenizer.model_max_length]
-        labels = labels[:, :self.tokenizer.model_max_length]
+        
+        max_length = min(input_ids.size(1), self.tokenizer.model_max_length)
+        input_ids = input_ids[:, :max_length]
+        labels = labels[:, :max_length]
+        
+        attention_mask = input_ids.ne(self.tokenizer.pad_token_id)
+        
         batch = dict(
             input_ids=input_ids,
             labels=labels,
-            attention_mask=input_ids.ne(self.tokenizer.pad_token_id),
+            attention_mask=attention_mask,
         )
 
         if 'image' in instances[0]:
@@ -136,4 +133,3 @@ class DataCollatorForSupervisedDataset(object):
                 batch['images'] = images
 
         return batch
-

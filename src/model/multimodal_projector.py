@@ -1,11 +1,11 @@
 from torch import nn
 from transformers.activations import ACT2FN
 
-from configuration_llama import MultimodalLlamaConfig
+from src.model.configuration import MultimodalConfig
 
 
-class MultiModalLlamaProjector(nn.Module):
-    def __init__(self, config: MultimodalLlamaConfig):
+class MultiModalProjector(nn.Module):
+    def __init__(self, config: MultimodalConfig):
         super().__init__()
 
         self.linear_1 = nn.Linear(config.vision_config.hidden_size, config.text_config.hidden_size, bias=True)

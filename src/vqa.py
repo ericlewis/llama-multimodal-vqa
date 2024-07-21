@@ -10,8 +10,8 @@ import logging
 import torch
 from PIL import Image
 
-from model.modeling_llama import MultimodalLlamaForConditionalGeneration
-from src.processing_llama import MultiModalLlamaProcessor
+from src.model.mutlimodal_model import MultimodalModelForConditionalGeneration
+from src.processing import MultiModalProcessor
 from utils.utils import get_available_device
 
 
@@ -38,21 +38,21 @@ if __name__ == '__main__':
 
     logging.info("Loading pretrained model...")
     device = get_available_device()
-    multimodal_llama_model = MultimodalLlamaForConditionalGeneration.from_pretrained(args.model_path,
+    multimodal_model = MultimodalModelForConditionalGeneration.from_pretrained(args.model_path,
                                                                                      device_map="cpu",
                                                                                      torch_dtype=torch.bfloat16).eval()
 
-    processor = MultiModalLlamaProcessor.from_pretrained(args.model_path)
+    processor = MultiModalProcessor.from_pretrained(args.model_path)
 
     logging.info("Running model for VQA...")
 
-    prompt = (f"<|start_header_id|>user<|end_header_id|> <image>\n{args.user_question} <|eot_id|>\n"
-              f"<|start_header_id|>assistant<|end_header_id|>:")
+    prompt = (f"<|im_start|>user <image>\n{args.user_question} <|im_end|>\n"
+              f"<|im_start|>assistant\n")
 
     raw_image = Image.open(args.image_path)
     inputs = processor(prompt, raw_image, return_tensors='pt').to(device, torch_dtype=torch.bfloat16)
 
-    output = multimodal_llama_model.generate(**inputs,
+    output = multimodal_model.generate(**inputs,
                                              max_new_tokens=200,
                                              do_sample=False)
     logging.info(f"Model answer: {processor.decode(output[0][2:], skip_special_tokens=True)}")
